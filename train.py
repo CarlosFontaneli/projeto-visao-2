@@ -12,17 +12,19 @@ as imagens não possuem o mesmo tamanho.
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from dataset import get_dataset, collate_fn
 
-# Gambiarra para importar o script train.py feito anteriormente
-import sys
 import m06_train as train_class
+from dataset import collate_fn, get_dataset
+
+
+def safe_div(numerator, denominator):
+    return numerator / denominator if denominator else 0.0
 
 
 @torch.no_grad()
-def iou(scores, targets):
-    """Função que calcula a Intersecção sobre a União entre o resultado
-    da rede e o rótulo conhecido."""
+def metrics(scores, targets):
+    """Função que calcula as métricas de acurácia, intersecção sobre a união,
+    precisão e revocação entre o resultado da rede e o rótulo conhecido."""
 
     # Transforma a predição da rede em índices 0 e 1, e aplica em reshape
     # nos tensores para transformá-los em 1D
@@ -45,17 +47,15 @@ def iou(scores, targets):
 
     # Algumas métricas interessantes para medir a qualidade do resultado
     # Fração de píxeis corretos
-    acc = (tp + tn) / (tp + tn + fp + fn)
+    acc = safe_div((tp + tn), (tp + tn + fp + fn))
     # Intersecção sobre a união (IoU)
-    iou = tp / (tp + fp + fn)
+    iou = safe_div(tp, (tp + fp + fn))
     # Precisão
-    prec = tp / (tp + fp)
+    prec = safe_div(tp, (tp + fp))
     # Revocação
-    rev = tp / (tp + fn)
+    rev = safe_div(tp, (tp + fn))
 
-    # Retorna apenas o iou para não termos que reescrever a função de plotagem
-    # dos resultados, que espera um único valor de performance
-    return iou
+    return iou, prec, rev
 
 
 def train(
